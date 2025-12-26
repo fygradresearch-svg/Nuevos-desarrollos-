@@ -1,0 +1,7 @@
+{
+  "name": "GasSafe IoT - Cocina Inteligente",
+  "description": "App de monitoreo y control remoto para cocinas a gas con detección de inactividad peligrosa y geocercas.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
