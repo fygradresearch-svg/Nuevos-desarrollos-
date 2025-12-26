@@ -1,15 +1,20 @@
+
 import React, { useState } from 'react';
 import { StoveState } from '../types';
 import { User, ShieldCheck, Fingerprint, Cpu, LogOut, ChevronRight, Globe, X, Check, Lock } from 'lucide-react';
 
 interface Props {
   stove: StoveState;
+  settings: {
+    biometricsEnabled: boolean;
+    language: string;
+    [key: string]: any;
+  };
+  onUpdateSettings: React.Dispatch<React.SetStateAction<any>>;
 }
 
-const Profile: React.FC<Props> = ({ stove }) => {
-  // Functional States
-  const [biometricsEnabled, setBiometricsEnabled] = useState(true);
-  const [currentLanguage, setCurrentLanguage] = useState('Español (ES)');
+const Profile: React.FC<Props> = ({ stove, settings, onUpdateSettings }) => {
+  // UI States
   const [showPinModal, setShowPinModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -32,11 +37,23 @@ const Profile: React.FC<Props> = ({ stove }) => {
     }
   };
 
+  const toggleBiometrics = () => {
+    const nextState = !settings.biometricsEnabled;
+    onUpdateSettings((p: any) => ({ ...p, biometricsEnabled: nextState }));
+    showFeedback(nextState ? 'Biometría activada' : 'Biometría desactivada', 'info');
+  };
+
+  const setLanguage = (lang: string) => {
+    onUpdateSettings((p: any) => ({ ...p, language: lang }));
+    setShowLanguageModal(false);
+    showFeedback(`Idioma cambiado a ${lang.split(' ')[0]}`);
+  };
+
   return (
     <div className="px-6 space-y-8 relative pb-10">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[110] animate-in fade-in slide-in-from-top-4">
           <div className={`px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-bold border ${toast.type === 'success' ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-800 text-white border-slate-700'}`}>
             {toast.type === 'success' ? <Check size={16} /> : <Fingerprint size={16} />}
             {toast.message}
@@ -62,12 +79,8 @@ const Profile: React.FC<Props> = ({ stove }) => {
           icon={<Fingerprint className="text-indigo-500" />} 
           label="Biometría para acciones críticas" 
           toggle={true} 
-          active={biometricsEnabled} 
-          onClick={() => {
-            const nextState = !biometricsEnabled;
-            setBiometricsEnabled(nextState);
-            showFeedback(nextState ? 'Biometría activada' : 'Biometría desactivada', 'info');
-          }}
+          active={settings.biometricsEnabled} 
+          onClick={toggleBiometrics}
         />
         <ProfileItem 
           icon={<ShieldCheck className="text-emerald-500" />} 
@@ -83,7 +96,7 @@ const Profile: React.FC<Props> = ({ stove }) => {
         <ProfileItem 
           icon={<Globe className="text-slate-500" />} 
           label="Idioma" 
-          value={currentLanguage} 
+          value={settings.language} 
           onClick={() => setShowLanguageModal(true)}
         />
       </div>
@@ -106,7 +119,7 @@ const Profile: React.FC<Props> = ({ stove }) => {
 
       {/* PIN Change Modal */}
       {showPinModal && (
-        <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-sm rounded-t-[32px] sm:rounded-[32px] p-8 shadow-2xl animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-8 duration-300">
             <div className="flex justify-between items-start mb-6">
               <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
@@ -117,7 +130,7 @@ const Profile: React.FC<Props> = ({ stove }) => {
               </button>
             </div>
             <h3 className="text-xl font-bold text-slate-900 mb-2">Cambiar PIN</h3>
-            <p className="text-slate-500 text-sm mb-8 leading-relaxed">Crea un nuevo código de 4 dígitos para autorizar encendidos remotos.</p>
+            <p className="text-slate-500 text-sm mb-8 leading-relaxed text-left">Crea un nuevo código de 4 dígitos para autorizar encendidos remotos.</p>
             
             <div className="space-y-6">
               <input 
@@ -146,7 +159,7 @@ const Profile: React.FC<Props> = ({ stove }) => {
 
       {/* Language Modal */}
       {showLanguageModal && (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-md rounded-t-[40px] p-8 pb-12 shadow-2xl animate-in slide-in-from-bottom-full duration-400">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-xl font-bold text-slate-900">Seleccionar Idioma</h3>
@@ -158,19 +171,15 @@ const Profile: React.FC<Props> = ({ stove }) => {
               {languages.map(lang => (
                 <button 
                   key={lang}
-                  onClick={() => {
-                    setCurrentLanguage(lang);
-                    setShowLanguageModal(false);
-                    showFeedback(`Idioma cambiado a ${lang.split(' ')[0]}`);
-                  }}
+                  onClick={() => setLanguage(lang)}
                   className={`w-full p-5 rounded-2xl flex items-center justify-between transition-all group active:scale-[0.98] ${
-                    currentLanguage === lang 
+                    settings.language === lang 
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
                       : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-transparent'
                   }`}
                 >
                   <span className="font-bold">{lang}</span>
-                  {currentLanguage === lang ? (
+                  {settings.language === lang ? (
                     <Check size={20} className="text-white" />
                   ) : (
                     <div className="w-5 h-5 rounded-full border-2 border-slate-200 group-hover:border-slate-300 transition-colors" />

@@ -49,7 +49,9 @@ const App: React.FC = () => {
     ruleAMinutes: 15,
     ruleBMinutes: 20,
     tempThreshold: 2.5,
-    conditionalIgnition: true
+    conditionalIgnition: true,
+    biometricsEnabled: true,
+    language: 'Español (ES)'
   });
 
   // Simulation Logic: Periodic updates
@@ -117,13 +119,13 @@ const App: React.FC = () => {
       case AppScreen.ONBOARDING: return <Onboarding onComplete={() => setCurrentScreen(AppScreen.LOGIN)} />;
       case AppScreen.LOGIN: return <Login onLogin={() => setCurrentScreen(AppScreen.PAIRING)} />;
       case AppScreen.PAIRING: return <Pairing onPair={() => setCurrentScreen(AppScreen.DASHBOARD)} />;
-      case AppScreen.DASHBOARD: return <Dashboard stove={stove} onToggle={handleToggleStove} />;
+      case AppScreen.DASHBOARD: return <Dashboard stove={stove} onToggle={handleToggleStove} biometricsEnabled={settings.biometricsEnabled} />;
       case AppScreen.ALERTS: return <Alerts alerts={alerts} onResolve={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} onActionOff={handleToggleStove} />;
       case AppScreen.HISTORY: return <History events={history} />;
       case AppScreen.SETTINGS: return <Settings config={settings} onUpdate={setSettings} />;
-      case AppScreen.PROFILE: return <Profile stove={stove} />;
+      case AppScreen.PROFILE: return <Profile stove={stove} settings={settings} onUpdateSettings={setSettings} />;
       case AppScreen.GEOFENCE: return <Geofence stove={stove} onToggleHome={() => setStove(p => ({...p, atHome: !p.atHome}))} config={settings} onUpdate={setSettings} />;
-      default: return <Dashboard stove={stove} onToggle={handleToggleStove} />;
+      default: return <Dashboard stove={stove} onToggle={handleToggleStove} biometricsEnabled={settings.biometricsEnabled} />;
     }
   };
 

@@ -1,15 +1,18 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StoveState, RiskLevel } from '../types';
-import { Power, Flame, Activity, Thermometer, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Power, Flame, Activity, Thermometer, Clock, AlertTriangle, ShieldCheck, Fingerprint, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface Props {
   stove: StoveState;
   onToggle: () => void;
+  biometricsEnabled: boolean;
 }
 
-const Dashboard: React.FC<Props> = ({ stove, onToggle }) => {
-  const [showConfirm, setShowConfirm] = useState(false);
+const Dashboard: React.FC<Props> = ({ stove, onToggle, biometricsEnabled }) => {
+  const [showConfirmOff, setShowConfirmOff] = useState(false);
+  const [showBiometrics, setShowBiometrics] = useState(false);
+  const [bioStatus, setBioStatus] = useState<'idle' | 'scanning' | 'success'>('idle');
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -26,9 +29,25 @@ const Dashboard: React.FC<Props> = ({ stove, onToggle }) => {
     }
   };
 
-  const getRiskIcon = (level: RiskLevel) => {
-    if (level === RiskLevel.LOW) return <ShieldCheck size={18} />;
-    return <AlertTriangle size={18} />;
+  const handleIgnitionClick = () => {
+    if (biometricsEnabled) {
+      setShowBiometrics(true);
+      setBioStatus('idle');
+    } else {
+      onToggle();
+    }
+  };
+
+  const simulateBioScan = () => {
+    setBioStatus('scanning');
+    setTimeout(() => {
+      setBioStatus('success');
+      setTimeout(() => {
+        onToggle();
+        setShowBiometrics(false);
+        setBioStatus('idle');
+      }, 800);
+    }, 1500);
   };
 
   return (
@@ -52,7 +71,7 @@ const Dashboard: React.FC<Props> = ({ stove, onToggle }) => {
           </div>
 
           <button
-            onClick={() => stove.isOn ? setShowConfirm(true) : onToggle()}
+            onClick={() => stove.isOn ? setShowConfirmOff(true) : handleIgnitionClick()}
             className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all ${
               stove.isOn 
                 ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/30' 
@@ -70,19 +89,68 @@ const Dashboard: React.FC<Props> = ({ stove, onToggle }) => {
         )}
       </div>
 
-      {/* Confirmation Modal */}
-      {showConfirm && (
+      {/* Confirmation Off Modal */}
+      {showConfirmOff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6 mx-auto">
               <Power size={32} />
             </div>
             <h3 className="text-xl font-bold text-center mb-2">¿Confirmar apagado?</h3>
-            <p className="text-slate-500 text-center mb-8">La cocina se apagará inmediatamente por seguridad.</p>
+            <p className="text-slate-500 text-center mb-8 text-sm leading-relaxed">La cocina se apagará inmediatamente por seguridad.</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowConfirm(false)} className="flex-1 py-4 rounded-xl font-bold text-slate-500 bg-slate-100">Cancelar</button>
-              <button onClick={() => {onToggle(); setShowConfirm(false);}} className="flex-1 py-4 rounded-xl font-bold text-white bg-red-500">Apagar</button>
+              <button onClick={() => setShowConfirmOff(false)} className="flex-1 py-4 rounded-xl font-bold text-slate-500 bg-slate-100 active:scale-95 transition-all">Cancelar</button>
+              <button onClick={() => {onToggle(); setShowConfirmOff(false);}} className="flex-1 py-4 rounded-xl font-bold text-white bg-red-500 active:scale-95 transition-all shadow-lg shadow-red-500/20">Apagar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Biometric Verification Modal */}
+      {showBiometrics && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-md">
+          <div className="bg-white rounded-[40px] p-10 w-full max-w-xs shadow-2xl flex flex-col items-center text-center animate-in zoom-in-75 duration-300">
+            <div className="mb-8 relative">
+              <div className={`w-28 h-28 rounded-full flex items-center justify-center transition-all duration-500 ${
+                bioStatus === 'success' ? 'bg-emerald-500 text-white' : 'bg-blue-50 text-blue-600'
+              }`}>
+                {bioStatus === 'idle' && <Fingerprint size={56} className="animate-pulse" />}
+                {bioStatus === 'scanning' && <Loader2 size={56} className="animate-spin" />}
+                {bioStatus === 'success' && <CheckCircle2 size={56} className="animate-in zoom-in" />}
+              </div>
+              {bioStatus === 'scanning' && (
+                <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              )}
+            </div>
+
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">
+              {bioStatus === 'idle' && 'Verificación'}
+              {bioStatus === 'scanning' && 'Escaneando...'}
+              {bioStatus === 'success' && '¡Identidad Confirmada!'}
+            </h3>
+            <p className="text-slate-500 text-sm mb-10 leading-relaxed px-4">
+              {bioStatus === 'idle' && 'Mantén pulsado el sensor para encender la cocina de forma segura.'}
+              {bioStatus === 'scanning' && 'No retires el dedo del sensor biométrico.'}
+              {bioStatus === 'success' && 'Procesando encendido remoto...'}
+            </p>
+
+            {bioStatus === 'idle' && (
+              <div className="space-y-4 w-full">
+                <button 
+                  onMouseDown={simulateBioScan}
+                  onTouchStart={simulateBioScan}
+                  className="w-full py-5 bg-blue-600 text-white rounded-3xl font-bold shadow-xl shadow-blue-200 active:scale-[0.98] transition-all"
+                >
+                  Escanear Huella
+                </button>
+                <button 
+                  onClick={() => setShowBiometrics(false)}
+                  className="w-full py-3 text-slate-400 font-bold text-sm"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -107,9 +175,9 @@ const Dashboard: React.FC<Props> = ({ stove, onToggle }) => {
           value={stove.lastActivity} 
           active={true}
         />
-        <div className={`p-4 rounded-2xl border flex flex-col gap-1 ${getRiskColor(stove.riskLevel)}`}>
+        <div className={`p-4 rounded-2xl border flex flex-col gap-1 transition-colors ${getRiskColor(stove.riskLevel)}`}>
            <div className="flex items-center gap-2">
-             {getRiskIcon(stove.riskLevel)}
+             {stove.riskLevel === RiskLevel.LOW ? <ShieldCheck size={18} /> : <AlertTriangle size={18} />}
              <span className="text-xs font-semibold uppercase tracking-wider">Riesgo Actual</span>
            </div>
            <span className="text-xl font-bold mt-1">{stove.riskLevel}</span>
@@ -118,7 +186,7 @@ const Dashboard: React.FC<Props> = ({ stove, onToggle }) => {
 
       {/* Safety Alert Rule Description */}
       {stove.riskLevel !== RiskLevel.LOW && (
-        <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl flex gap-3 animate-bounce">
+        <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl flex gap-3 animate-bounce shadow-sm">
           <AlertTriangle className="text-orange-500 shrink-0" />
           <p className="text-sm text-orange-800 leading-relaxed font-medium">
             {stove.riskLevel === RiskLevel.MEDIUM 
@@ -132,7 +200,7 @@ const Dashboard: React.FC<Props> = ({ stove, onToggle }) => {
 };
 
 const MetricCard: React.FC<{ icon: React.ReactNode, label: string, value: string, active: boolean }> = ({ icon, label, value, active }) => (
-  <div className={`p-5 rounded-3xl border transition-all ${active ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-100 grayscale'}`}>
+  <div className={`p-5 rounded-3xl border transition-all duration-300 ${active ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-50 border-slate-100 grayscale opacity-70'}`}>
     <div className="flex items-center gap-2 mb-2 text-slate-400">
       {icon}
       <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
